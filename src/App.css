@@ -1,0 +1,121 @@
+.idea-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: var(--shadow);
+  margin-bottom: 32px;
+}
+
+.idea-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-h);
+  text-align: left;
+}
+
+.idea-form input,
+.idea-form textarea {
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text-h);
+  resize: vertical;
+}
+
+.idea-form input:focus,
+.idea-form textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.idea-form button {
+  align-self: flex-start;
+  font: inherit;
+  font-weight: 600;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: white;
+  cursor: pointer;
+}
+
+.idea-form button:hover {
+  opacity: 0.9;
+}
+
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.empty {
+  text-align: center;
+  opacity: 0.6;
+  padding: 24px 0;
+}
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: var(--shadow);
+  text-align: left;
+}
+
+.card header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.card h2 {
+  font-size: 18px;
+  margin: 0;
+  color: var(--text-h);
+}
+
+.card-task {
+  margin: 8px 0 4px;
+  font-size: 13px;
+  color: var(--accent);
+  background: var(--accent-bg);
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.card-idea {
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.delete-btn {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  background: transparent;
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.delete-btn:hover {
+  background: var(--danger);
+  color: white;
+}
