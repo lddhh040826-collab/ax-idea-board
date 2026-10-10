@@ -7,7 +7,14 @@ npm install
 npm run dev            # http://localhost:3055
 npm run build
 npm run check:samples  # Q6 기준: 샘플 3쌍의 정답 변경 목록과 대조
+npm run preview        # 빌드본을 http://localhost:3055 으로 실행 (앱 설치는 빌드본에서만 됨)
 ```
+
+## 앱으로 설치 (PWA)
+
+`npm run build && npm run preview`로 연 뒤 Chrome·Edge에서 첫 화면의 [앱으로 설치] 버튼(또는 주소창 오른쪽 설치 아이콘)을 누른다.
+바탕화면·시작 메뉴에 아이콘이 생기고 자기 창에서 열린다. 한 번 연 뒤에는 인터넷 없이도 열린다.
+다른 사람이 설치하려면 앱을 https 주소로 배포해야 한다(localhost는 예외). 아이콘은 `python3 scripts/make-icons.py public`으로 다시 만든다.
 
 ## 지금 구현된 범위
 

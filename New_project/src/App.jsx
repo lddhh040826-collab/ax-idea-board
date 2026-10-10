@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { compareTexts } from './lib/compare.js'
 import { extractText, FileProblem } from './lib/extract.js'
+import { useInstallPrompt } from './lib/install.js'
 import { decodeShare, encodeShare } from './lib/share.js'
 import { samples } from './samples.js'
 import './App.css'
@@ -43,6 +44,7 @@ function UploadScreen({ onCompared, initialError }) {
   const [errors, setErrors] = useState({ old: '', new: '' })
   const [formError, setFormError] = useState(initialError)
   const [busy, setBusy] = useState(false)
+  const install = useInstallPrompt()
 
   useEffect(() => setFormError(initialError), [initialError])
 
@@ -81,9 +83,16 @@ function UploadScreen({ onCompared, initialError }) {
 
   return (
     <main className="upload">
-      <header>
-        <h1>계약서 버전 대조</h1>
-        <p className="lead">구버전과 신버전을 올리면 조항별로 무엇이 어떻게 바뀌었는지 짚어 드려요. 가입 없이 바로 쓸 수 있어요.</p>
+      <header className="upload-head">
+        <div>
+          <h1>계약서 버전 대조</h1>
+          <p className="lead">구버전과 신버전을 올리면 조항별로 무엇이 어떻게 바뀌었는지 짚어 드려요. 가입 없이 바로 쓸 수 있어요.</p>
+        </div>
+        {install && (
+          <button className="ghost install" onClick={install}>
+            앱으로 설치
+          </button>
+        )}
       </header>
 
       <div className="slots">

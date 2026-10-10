@@ -45,6 +45,17 @@ h1 {
 }
 
 /* 화면 1 */
+.upload-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.install {
+  flex-shrink: 0;
+}
+
 .upload {
   max-width: 820px;
 }
