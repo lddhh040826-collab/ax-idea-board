@@ -4,7 +4,7 @@
 
 ```bash
 npm install
-npm run dev            # http://localhost:3001
+npm run dev            # http://localhost:3055
 npm run build
 npm run check:samples  # Q6 기준: 샘플 3쌍의 정답 변경 목록과 대조
 ```
