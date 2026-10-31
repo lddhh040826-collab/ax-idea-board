@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { roomLink, saveOffDays } from '../api/rooms.js'
 import CopyButton from '../components/CopyButton.jsx'
 import DateDetail from '../components/DateDetail.jsx'
+import InviteMaker from '../components/InviteMaker.jsx'
 import MonthCalendar from '../components/MonthCalendar.jsx'
 import PasswordGate from '../components/PasswordGate.jsx'
 import ResultPanel from '../components/ResultPanel.jsx'
@@ -21,6 +22,7 @@ export default function Room() {
   const [tab, setTab] = useState('mine')
   const [picked, setPicked] = useState(null)
   const [menu, setMenu] = useState(false)
+  const [invite, setInvite] = useState(false)
   const [saved, setSaved] = useState(null)
   // 결과 보기에서 고른 기간 { from, to }. null이면 전체 기간. 탭을 바꿔도 유지한다
   const [period, setPeriod] = useState(null)
@@ -76,7 +78,10 @@ export default function Room() {
         <Sheet band="확정" className="confirmed center">
           <h1>{formatDateLong(room.confirmedDate)}</h1>
           <p className="muted small">되는 사람: {table.get(room.confirmedDate)?.ok.join(', ') || '기간이 지난 날짜예요'}</p>
-          <CopyButton text={`[${room.title}] ${formatDateLong(room.confirmedDate)}에 만나요!\n${roomLink(room.id)}`} label="공지 복사" />
+          <div className="row wrap center-row">
+            <button type="button" className="btn primary" onClick={() => setInvite(true)}>초대장 만들기</button>
+            <CopyButton text={`[${room.title}] ${formatDateLong(room.confirmedDate)}에 만나요!\n${roomLink(room.id)}`} label="공지 복사" />
+          </div>
         </Sheet>
       )}
 
@@ -89,7 +94,7 @@ export default function Room() {
         </div>
 
         <div className="tabs" role="tablist">
-          <button type="button" role="tab" aria-selected={tab === 'mine'} className={tab === 'mine' ? 'on' : ''} onClick={() => setTab('mine')}>내 안 되는 날</button>
+          <button type="button" role="tab" aria-selected={tab === 'mine'} className={tab === 'mine' ? 'on' : ''} onClick={() => setTab('mine')}>안 되는 날</button>
           <button type="button" role="tab" aria-selected={tab === 'result'} className={tab === 'result' ? 'on' : ''} onClick={() => setTab('result')}>결과 보기</button>
         </div>
 
@@ -97,7 +102,7 @@ export default function Room() {
           <>
             <div className="row between wrap">
               <p className="muted small">
-                {confirmed ? '날짜가 확정된 방이라 바꿀 수 없어요.' : '안 되는 날을 탭하거나 드래그해서 X 치세요. 표시 안 한 날은 되는 날이에요.'}
+                안 되는 날을 탭하거나 드래그해서 X 치세요. 표시 안 한 날은 되는 날이에요.
               </p>
               <span className="muted small">{saved ? `저장됨 ✓ ${saved.toLocaleTimeString('ko-KR')}` : '바로 저장돼요'}</span>
             </div>
@@ -109,7 +114,6 @@ export default function Room() {
               table={table}
               total={profiles.length}
               confirmedDate={room.confirmedDate}
-              disabled={confirmed}
               onCommit={commit}
             />
             <div className="legend muted small">
@@ -152,6 +156,15 @@ export default function Room() {
           onChange={done}
           onError={(m) => push(m, 'error')}
           onGone={(m) => navigate('/', { state: { message: m } })}
+        />
+      )}
+      {invite && confirmed && (
+        <InviteMaker
+          room={room}
+          profiles={profiles}
+          onClose={() => setInvite(false)}
+          onDone={(m) => push(m)}
+          onError={(m) => push(m, 'error')}
         />
       )}
       <Toasts toasts={toasts} />

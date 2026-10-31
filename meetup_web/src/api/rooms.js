@@ -129,7 +129,6 @@ export function saveOffDays(roomId, changes) {
   update((db) => {
     const room = db.rooms[roomId]
     if (!room) fail('방을 찾을 수 없어요')
-    if (room.confirmedDate) fail('날짜가 확정된 방이라 바꿀 수 없어요')
     me = myProfile(db, roomId) ?? fail('이 방에 참여하지 않았어요')
     for (const { date, off } of changes) {
       const i = db.offDays.findIndex((r) => r.roomId === roomId && r.profileId === me.id && r.date === date)

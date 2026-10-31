@@ -1,9 +1,8 @@
-// 처음 화면(로그인 후): 내가 속한 방 목록 + 방 만들기 + 받은 링크로 들어가기
+// 처음 화면(로그인 후): 내가 속한 방 목록(방장은 삭제, 모임원은 나가기) + 방 만들기 + 받은 링크로 들어가기
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { listMyRooms, parseRoomLink } from '../api/rooms.js'
+import { deleteRoom, leaveRoom, listMyRooms, parseRoomLink } from '../api/rooms.js'
 import Sheet from '../components/Sheet.jsx'
-import { formatDate } from '../lib/dates.js'
 import { useSession } from '../hooks/useSession.js'
 
 export default function Home() {
@@ -11,9 +10,28 @@ export default function Home() {
   const navigate = useNavigate()
   const [link, setLink] = useState('')
   const [error, setError] = useState('')
+  // 목록에서 삭제·나가기를 하면 다시 읽도록 바꾸는 값
+  const [, setVersion] = useState(0)
+  const [notice, setNotice] = useState('')
+  const location = useLocation()
   const rooms = listMyRooms()
-  // 방 삭제·나가기 후 넘어오면 한 줄 안내
-  const message = useLocation().state?.message
+  // 방 안에서 삭제·나가기를 하고 넘어오면 한 줄 안내
+  const message = notice || location.state?.message
+
+  const remove = (r) => {
+    const ask = r.isHost
+      ? `'${r.title}' 모임을 삭제할까요?\n모든 모임원의 표시와 메모도 함께 지워지고, 되돌릴 수 없어요.`
+      : `'${r.title}' 모임에서 나갈까요?\n내가 표시한 날짜와 메모도 함께 지워져요.`
+    if (!window.confirm(ask)) return
+    try {
+      if (r.isHost) deleteRoom(r.id)
+      else leaveRoom(r.id)
+      setNotice(r.isHost ? '모임을 삭제했어요' : '모임에서 나왔어요')
+    } catch (err) {
+      setNotice(err.message)
+    }
+    setVersion((v) => v + 1)
+  }
 
   const go = (e) => {
     e.preventDefault()
@@ -33,15 +51,17 @@ export default function Home() {
         {rooms.length ? (
           <ul className="list">
             {rooms.map((r) => (
-              <li key={r.id}>
+              <li key={r.id} className="room-row">
                 <Link className="room-item" to={`/r/${r.id}`}>
                   <span>
                     <b>{r.title}</b>
                     {r.isHost && <em className="tag">방장</em>}
                     <span className="muted small"> · {r.members}명</span>
                   </span>
-                  {r.confirmedDate ? <span className="pill">{formatDate(r.confirmedDate)} 확정</span> : <span className="muted small">정하는 중</span>}
                 </Link>
+                <button type="button" className="btn danger room-action" onClick={() => remove(r)}>
+                  {r.isHost ? '삭제' : '나가기'}
+                </button>
               </li>
             ))}
           </ul>

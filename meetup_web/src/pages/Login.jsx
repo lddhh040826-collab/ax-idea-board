@@ -35,7 +35,7 @@ export default function Login() {
     <>
       <div className="hero">
         <p className="hero-sub">약속 잡기 힘든 친구들</p>
-        <h1 className="hero-title">안 되는 날만 X 치면 끝</h1>
+        <h1 className="hero-title">얘들아 언제볼래?</h1>
       </div>
       <Sheet band="로그인">
         <form className="stack narrow" onSubmit={submit}>

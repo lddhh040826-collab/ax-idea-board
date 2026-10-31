@@ -27,7 +27,7 @@ API (api/)             auth.js (로그인) · rooms.js (방 기능, 입력 제�
 ```
 meetup_web/
 ├─ index.html          첫 그리기 전에 저장된 화면 모드를 적용하는 짧은 스크립트 포함
-├─ vite.config.js      포트 3058 고정
+├─ vite.config.js      포트 3059 고정
 ├─ public/favicon.svg
 ├─ scripts/check-tally.mjs   집계 규칙 검사 (npm run check:tally)
 └─ src/
@@ -106,6 +106,38 @@ notes     [ { roomId, date, profileId, name, text, updatedAt } ]   날짜·사�
   - `:root[data-theme='dark']` — 버튼으로 다크를 골랐을 때 적용
 - `ThemeToggle`이 `<html data-theme>`을 붙이거나 떼고 `meetup.theme`에 저장한다. 자동이면 속성과 키를 모두 지운다.
 - `index.html`의 짧은 스크립트가 React보다 먼저 저장값을 적용해 새로고침할 때 깜빡이지 않게 한다.
+
+## 글꼴과 글자 크기
+
+- 글꼴은 `--display` 변수 하나로 본문과 제목에 모두 쓴다: `'SF Gyeoul Myeongjo', 'Noto Serif KR', 'AppleMyungjo', serif`.
+- SF겨울명조는 눈누마켓의 유료 폰트라 저장소에 넣지 않았다. 구매한 woff2 파일을 `public/fonts/`에 넣으면 적용된다.
+  - `SFGyeoulMyeongjo-Medium.woff2` — 굵기 100~600 (본문)
+  - `SFGyeoulMyeongjo-Bold.woff2` — 굵기 700~900 (제목, 버튼)
+  - 파일이 없으면 Google Fonts의 Noto Serif KR로 보인다(`index.html`에서 불러옴).
+- 글자 크기는 모두 `rem`이다. `:root`의 `font-size: 112.5%`(18px) 하나로 전체 크기가 같이 바뀐다.
+
+## 초대장 (`lib/invite.js`, `components/InviteMaker.jsx`)
+
+- 900×1600(9:16) 세로 캔버스에 그린다. 생김새는 두 가지다.
+  - **포스터형** (술자리·카페·생일파티·걸스나잇, `drawPoster`): 크림 종이에 한 가지 잉크색. 굵은 대문자 제목, 방 이름, 검은 마커 선 그림, 큰 날짜와 요일, 「— 」로 잇는 한 줄 문구, 표 [DATE: | TIME:] / [WHERE:] / [DRESSCODE:], 맨 아래 WHO를 「이름 x 이름」으로, 가장자리에 반짝이 별.
+  - **테마형** (여행·운동·홈파티): 위 문구 / 가운데 그림(날짜는 그림 안) / 아래 방 이름과 정보 표(TIME / WHERE / WHO / DRESSCODE).
+- 카테고리(`CATEGORIES`)는 이름과 문구만, 생김새는 `THEMES`에 있다. 포스터형은 `lines`·`tagline`·`color`·`sketch`, 테마형은 문구 글꼴·색·`bg`·`art`.
+
+| 카테고리 | 형식 | 제목/문구 | 색 | 가운데 그림 |
+|---|---|---|---|---|
+| 술자리 | 포스터 | CHEERS! | 와인 레드 | 와인병, 건배하는 잔 |
+| 카페 | 포스터 | CAFÉ & CHILL | 세이지 그린 | 머그 두 개, 하트 모양 김, 쿠키 |
+| 생일파티 | 포스터 | HAPPY BIRTHDAY! | 로열 블루 | 2단 케이크, 풍선 |
+| 걸스나잇 | 포스터 | GIRLS ONLY | 마젠타 | 선글라스 낀 얼굴 다섯 |
+| 여행 | 테마 | adios! | 하늘색·남색·주황 | 탑승권 (날짜는 DATE 칸) |
+| 운동 | 테마 | just do it | 비비드 파랑·라임·주황 | 스톱워치 (날짜는 안쪽) |
+| 홈파티 | 테마 | Home sweet home | 웜톤 | 집 (날짜는 현관 위 간판) |
+
+- 그림은 이미지 파일 없이 `Path2D`로 직접 그린다. 외부 이미지를 캔버스에 그리면 복사·저장이 막히기 때문이다. 포스터형 그림은 600×600 칸, 테마형 그림은 가로 칸(x 900~1560, y 60~850) 기준이고, 남은 높이에 맞춰 옮기고 줄인다.
+- 글꼴은 모두 Google Fonts(`index.html`): Montserrat(포스터형), Bebas Neue·Anton·Shrikhand(테마형), Noto Sans KR 900·Nanum Pen Script(한글). 그리기 전에 그 카테고리가 쓰는 글꼴만 실제 글자로 `document.fonts.load`를 부른다(`loadInviteFonts`).
+- WHO는 처음에 참여자 이름이 채워져 있고 쉼표로 나눠 고칠 수 있다(비우면 「우리 모두」, 길면 「○○ 외 n명」). 시간·장소·드레스코드·WHO는 초대장에만 쓰고 저장하지 않는다.
+- 복사는 `navigator.clipboard.write`(PNG). https나 localhost에서만 되고, 막히면 저장하기를 안내한다. 공유하기는 파일 공유를 지원하는 브라우저(주로 휴대폰)에서만 보인다.
+- 「just do it」은 나이키의 등록 상표 슬로건이다. 서비스로 공개하기 전에 문구를 바꿀지 정해야 한다.
 
 ## 서버로 옮기는 방법 (계획)
 
