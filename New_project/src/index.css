@@ -1,0 +1,32 @@
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --text: #1c1f24;
+  --muted: #6b7280;
+  --line: #e3e6ea;
+  --accent: #2f5bd3;
+  --add-bg: #dcf5e3;
+  --add-fg: #116b32;
+  --del-bg: #fde2e2;
+  --del-fg: #b42318;
+  --mod-bg: #fff1a8;
+  --mod-fg: #7a5a00;
+  font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
