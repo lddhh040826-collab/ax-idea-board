@@ -6,14 +6,18 @@ import Sheet from './Sheet.jsx'
 export default function PasswordGate({ room, onJoin }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault()
+    setBusy(true)
     try {
-      joinRoom(room.id, password)
-      onJoin()
+      await joinRoom(room.id, password)
+      await onJoin()
     } catch (err) {
       setError(err.message)
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -31,7 +35,7 @@ export default function PasswordGate({ room, onJoin }) {
           onChange={(e) => { setPassword(e.target.value.replace(/\D/g, '')); setError('') }}
         />
         {error && <p className="error">{error}</p>}
-        <button className="btn primary wide" type="submit" disabled={!password}>참여하기</button>
+        <button className="btn primary wide" type="submit" disabled={busy || !password}>{busy ? '확인 중…' : '참여하기'}</button>
       </form>
     </Sheet>
   )

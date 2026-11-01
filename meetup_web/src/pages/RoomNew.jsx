@@ -10,13 +10,17 @@ export default function RoomNew() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [room, setRoom] = useState(null)
+  const [busy, setBusy] = useState(false)
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault()
+    setBusy(true)
     try {
-      setRoom(createRoom({ title, password }))
+      setRoom(await createRoom({ title, password }))
     } catch (err) {
       setError(err.message)
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -57,7 +61,7 @@ export default function RoomNew() {
           </label>
           <p className="muted small">암호는 친구에게 공유해 주세요. 링크와 암호를 아는 사람만 들어올 수 있어요.</p>
           {error && <p className="error">{error}</p>}
-          <button className="btn primary wide" type="submit" disabled={!title.trim() || !password}>만들기</button>
+          <button className="btn primary wide" type="submit" disabled={busy || !title.trim() || !password}>{busy ? '만드는 중…' : '만들기'}</button>
         </form>
       </Sheet>
     </>

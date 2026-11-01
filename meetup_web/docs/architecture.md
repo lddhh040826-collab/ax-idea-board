@@ -1,6 +1,6 @@
 # architecture.md — 언제볼래 구조
 
-기준: 2026-10-31 체험판 코드
+기준: 2026-10-31 코드 (서버 모드 + 체험판)
 
 ## 한눈에 보기
 
@@ -11,15 +11,19 @@
    ▼
 훅 (hooks/)            useSession (로그인 상태) · useRoom (방 불러오기 + 변경 구독)
    ▼
-API (api/)             auth.js (로그인) · rooms.js (방 기능, 입력 제한)
+API (api/)             auth.js · rooms.js · realtime.js  ← 화면이 부르는 곳. 모두 Promise
+   │                     backend.js가 둘 중 하나를 고른다
+   ├─ server/            Supabase: DB 함수(RPC)·표 읽기/쓰기, Realtime 방송   ← VITE_SUPABASE_* 가 있을 때
+   └─ local/             localStorage DB + BroadcastChannel(탭 사이)        ← 없을 때(체험판)
    ▼
-저장소 (api/store.js)   localStorage DB + BroadcastChannel(탭 사이 전파)
+DB (supabase/schema.sql) 표, RLS(누가 무엇을 읽고 쓰나), 서버 함수
 
 규칙 (lib/)            tally.js (집계, 순수 함수) · dates.js (날짜 계산)
 ```
 
-- 화면은 `api/`의 함수만 부른다. localStorage를 직접 만지지 않는다.
-- 서버를 붙일 때는 `api/` 안쪽만 바꾸고 화면은 그대로 둔다. 이것이 이 구조의 핵심 약속이다.
+- 화면은 `api/auth.js`·`rooms.js`·`realtime.js`만 부른다. 서버판과 체험판은 함수 이름과 돌려주는 모양이 같다(`loadRoom`의 `{ room, isHost, me, profiles, offRows, notes }` 등).
+- 입력 제한(`limits.js`)과 링크 만들기(`links.js`)는 두 판이 같이 쓴다.
+- 서버판에서 화면 쪽 확인은 빠른 안내용일 뿐이고, 실제로 막는 것은 DB의 RLS와 함수다.
 - `lib/`은 화면도 저장소도 모르는 순수 함수라 Node에서 바로 검사한다(`scripts/check-tally.mjs`).
 
 ## 폴더 구조
@@ -85,12 +89,21 @@ notes     [ { roomId, date, profileId, name, text, updatedAt } ]   날짜·사�
 - 절전 등으로 10분 넘게 비웠다 돌아오면 갱신이 실패하고 로그인 화면으로 간다.
 - 로그아웃은 세션과 돌아갈 주소를 모두 지우고 `/`에서 새로 시작한다. 다음에 로그인한 사람이 보던 방으로 끌려가지 않게 하려는 것이다.
 
+## 서버 모드 (Supabase)
+
+- 로그인: 기기마다 Supabase **익명 로그인**을 하나 쓰고, 「이름 + 4글자 비밀번호」 계정은 `accounts` 표에서 직접 관리한다. `sign_in`이 맞으면 `sessions`에 「이 기기 → 이 계정」을 적고, 모든 권한 확인은 `me()`로 한다. (Supabase 기본 로그인은 이메일과 6자 이상 비밀번호가 필요해서 지금 로그인 방식과 맞지 않는다)
+- 비밀번호·방 암호는 bcrypt. 5번 틀리면 5분 잠금. 클라이언트는 그 칸을 읽을 수 없다(칸 단위 권한).
+- 방 만들기·참여·방 암호 변경·가입·로그인은 DB 함수(RPC), 나머지는 표를 직접 읽고 쓰되 RLS가 막는다.
+- 10분 로그인 유지는 체험판과 같다: 기기에 `eonje:seen:v1`(마지막으로 쓴 때)을 두고, 넘으면 `sign_out`.
+- 표: `accounts`, `sessions`, `rooms`, `members`(방 참여), `off_days`, `notes`. 나가면 그 사람의 표시·메모, 방을 지우면 방 안 모든 것이 DB에서 같이 지워진다(외래 키 cascade).
+- SQL은 이 서버의 PostgreSQL 16에 Supabase 흉내(익명 사용자, `auth.uid()`)를 만들어 시험했다: 가입·잠금·RLS·칸 권한·cascade. Supabase 실제 프로젝트에서는 아직 돌려 보지 않았다.
+
 ## 실시간 반영
 
-- 바꾸는 함수(`joinRoom`, `saveOffDays`, `confirmDate` 등)는 저장한 뒤 `publish({ type, roomId, ... })`로 BroadcastChannel `eonje:realtime`에 알린다.
-- `useRoom`은 같은 방의 이벤트를 받으면 방 전체를 다시 읽는다. 다른 창에서 저장소가 바뀐 경우를 대비해 `storage` 이벤트(`eonje:`로 시작하는 키)도 듣는다.
+- 바꾸는 함수(`joinRoom`, `saveOffDays`, `confirmDate` 등)는 저장한 뒤 그 방에 「바뀌었다」는 신호를 보낸다. 서버판은 Supabase Realtime 방송 채널 `room:<id>`, 체험판은 BroadcastChannel `eonje:realtime`(같은 브라우저의 다른 탭).
+- 신호에는 데이터가 없다. `useRoom`은 신호를 받으면 방 전체를 다시 읽는다(서버판은 RLS를 거친다). 체험판은 `storage` 이벤트도 예비로 듣는다.
 - `offdays_changed`면 「방금 ○○님이 날짜를 바꿨어요」 알림을 띄운다.
-- 같은 브라우저 안에서만 동작한다. 서버를 붙이면 이 자리를 서버의 실시간 구독(예: Supabase Realtime)으로 바꾼다.
+- 안 되는 날은 손을 떼면 화면부터 바꾸고(`patch`) 저장한 뒤 다시 읽는다. 저장이 실패하면 다시 읽으면서 원래대로 돌아간다.
 
 ## 집계 규칙 (`lib/tally.js`)
 
@@ -138,11 +151,3 @@ notes     [ { roomId, date, profileId, name, text, updatedAt } ]   날짜·사�
 - WHO는 처음에 참여자 이름이 채워져 있고 쉼표로 나눠 고칠 수 있다(비우면 「우리 모두」, 길면 「○○ 외 n명」). 시간·장소·드레스코드·WHO는 초대장에만 쓰고 저장하지 않는다.
 - 복사는 `navigator.clipboard.write`(PNG). https나 localhost에서만 되고, 막히면 저장하기를 안내한다. 공유하기는 파일 공유를 지원하는 브라우저(주로 휴대폰)에서만 보인다.
 - 「just do it」은 나이키의 등록 상표 슬로건이다. 서비스로 공개하기 전에 문구를 바꿀지 정해야 한다.
-
-## 서버로 옮기는 방법 (계획)
-
-1. DB에 위 다섯 테이블을 만든다. `users.password`와 `rooms.password`는 해시로 저장한다.
-2. `api/store.js`의 `readDb` / `update` 대신 `auth.js`·`rooms.js` 함수 안에서 서버를 부른다. 함수 이름과 돌려주는 모양(`loadRoom`의 `{ room, isHost, me, profiles, offRows, notes }` 등)은 그대로 둔다.
-3. 함수가 비동기가 되므로 화면에서 부르는 곳에 `await`과 로딩 표시를 더해야 한다. 이 부분은 화면도 조금 고쳐야 한다.
-4. 방 암호·방장 확인을 서버에서 한다. 지금은 브라우저에서 확인하므로 누구나 우회할 수 있다.
-5. `publish` / `subscribe`를 서버 실시간 구독으로 바꾼다.

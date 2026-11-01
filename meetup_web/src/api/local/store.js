@@ -1,5 +1,4 @@
-// 체험판 저장소: 서버 대신 이 브라우저의 localStorage에 저장한다.
-// 서버로 옮길 때는 api/ 폴더의 함수 안쪽만 바꾸고, 화면은 그대로 둔다.
+// 체험판 저장소: 서버 설정이 없을 때 이 브라우저의 localStorage에 저장한다.
 
 // v2: 로그인(users)과 방 참여(profiles.user)가 생겨서 예전(v1) 데이터는 읽지 않는다
 const KEY = 'eonje:db:v2'
@@ -33,11 +32,16 @@ export function publish(event) {
   channel?.postMessage({ ...event, at: Date.now() })
 }
 
-export function subscribe(handler) {
-  if (!channel) return () => {}
-  const onMessage = (e) => handler(e.data)
-  channel.addEventListener('message', onMessage)
-  return () => channel.removeEventListener('message', onMessage)
+// 방 하나의 변경을 듣는다. 다른 창에서 저장소가 바뀐 경우(storage 이벤트)도 예비로 듣는다
+export function subscribeRoom(roomId, handler) {
+  const onMessage = (e) => e.data?.roomId === roomId && handler(e.data)
+  const onStorage = (e) => e.key?.startsWith('eonje:') && handler({ type: 'room_changed', roomId })
+  channel?.addEventListener('message', onMessage)
+  window.addEventListener('storage', onStorage)
+  return () => {
+    channel?.removeEventListener('message', onMessage)
+    window.removeEventListener('storage', onStorage)
+  }
 }
 
 export function newId(length = 6) {

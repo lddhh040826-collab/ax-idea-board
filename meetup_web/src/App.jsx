@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { getSession, signOut, touchSession } from './api/auth.js'
+import { remote } from './api/backend.js'
 import { SessionContext, rememberReturnPath, useSession } from './hooks/useSession.js'
 import Home from './pages/Home.jsx'
 import Login from './pages/Login.jsx'
@@ -20,8 +21,15 @@ function RequireLogin({ children }) {
 }
 
 export default function App() {
-  const [session, setSession] = useState(() => getSession())
+  // undefined = 로그인 상태 확인 중
+  const [session, setSession] = useState(undefined)
   const value = useMemo(() => ({ session, setSession }), [session])
+
+  useEffect(() => {
+    getSession()
+      .then(setSession)
+      .catch(() => setSession(null))
+  }, [])
 
   // 열어 둔 동안 1분마다, 그리고 탭을 가리거나 닫을 때 「마지막으로 쓴 때」를 남긴다.
   // 10분 넘게 비웠다가 돌아오면(절전 등) 로그인이 풀린 것으로 보고 로그인 화면으로 보낸다
@@ -29,7 +37,9 @@ export default function App() {
   useEffect(() => {
     if (!signedIn) return undefined
     const touch = () => {
-      if (!touchSession()) setSession(null)
+      touchSession()
+        .then((s) => !s && setSession(null))
+        .catch(() => {})
     }
     touch()
     const timer = setInterval(touch, 60 * 1000)
@@ -57,9 +67,9 @@ export default function App() {
               <button
                 type="button"
                 className="link plain"
-                onClick={() => {
+                onClick={async () => {
                   // 처음 화면에서 새로 시작한다. 다음에 로그인하는 사람이 보던 방으로 끌려가지 않게 한다
-                  signOut()
+                  await signOut()
                   window.location.replace('/')
                 }}
               >
@@ -70,17 +80,23 @@ export default function App() {
         </div>
       </header>
       <main className="page">
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/" element={<RequireLogin><Home /></RequireLogin>} />
-          <Route path="/new" element={<RequireLogin><RoomNew /></RequireLogin>} />
-          <Route path="/r/:id" element={<RequireLogin><Room /></RequireLogin>} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        {session === undefined ? (
+          <p className="muted center-text top-gap">불러오는 중…</p>
+        ) : (
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<RequireLogin><Home /></RequireLogin>} />
+            <Route path="/new" element={<RequireLogin><RoomNew /></RequireLogin>} />
+            <Route path="/r/:id" element={<RequireLogin><Room /></RequireLogin>} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        )}
       </main>
-      <footer className="footnote">
-        체험판 · 계정과 방은 이 브라우저에만 저장돼요. 친구와 실제로 함께 쓰려면 서버 저장을 붙여야 해요.
-      </footer>
+      {!remote && (
+        <footer className="footnote">
+          체험판 · 계정과 방은 이 브라우저에만 저장돼요. 친구와 실제로 함께 쓰려면 서버 저장을 붙여야 해요.
+        </footer>
+      )}
     </SessionContext.Provider>
   )
 }

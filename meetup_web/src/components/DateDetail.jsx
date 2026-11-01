@@ -9,9 +9,9 @@ export default function DateDetail({ room, date, entry, notes, me, isHost, onClo
   const [text, setText] = useState(mineNote?.text ?? '')
   const confirmed = room.confirmedDate === date
 
-  const run = (fn, done) => {
+  const run = async (fn, done) => {
     try {
-      fn()
+      await fn()
       onChange(done)
     } catch (err) {
       onError(err.message)

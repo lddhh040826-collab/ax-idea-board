@@ -33,11 +33,20 @@ export default function Room() {
     },
     [push],
   )
-  const { data, reload } = useRoom(id, { onRemoteChange })
+  const { data, error, reload, patch } = useRoom(id, { onRemoteChange })
 
   const range = useMemo(() => windowRange(), [])
   const dates = useMemo(() => dateRange(range.start, range.end), [range])
   const table = useMemo(() => (data ? tally({ dates, profiles: data.profiles, offRows: data.offRows }) : new Map()), [data, dates])
+
+  if (data === undefined) {
+    return (
+      <Sheet band="잠시만요" className="center">
+        <p className="muted">{error || '방을 불러오는 중…'}</p>
+        {error && <button type="button" className="btn" onClick={reload}>다시 시도</button>}
+      </Sheet>
+    )
+  }
 
   if (!data) {
     return (
@@ -56,9 +65,16 @@ export default function Room() {
   const mine = new Set(offRows.filter((r) => r.profileId === me.id).map((r) => r.date))
   const confirmed = Boolean(room.confirmedDate)
 
-  const commit = (changes) => {
+  // 손을 떼면 화면부터 바꾸고 저장한다. 실패하면 서버 값으로 되돌린다
+  const commit = async (changes) => {
+    patch((d) => {
+      const drop = new Set(changes.map((c) => c.date))
+      const kept = d.offRows.filter((r) => !(r.profileId === me.id && drop.has(r.date)))
+      const added = changes.filter((c) => c.off).map((c) => ({ profileId: me.id, date: c.date }))
+      return { ...d, offRows: [...kept, ...added] }
+    })
     try {
-      saveOffDays(id, changes)
+      await saveOffDays(id, changes)
       setSaved(new Date())
     } catch (err) {
       push(err.message, 'error')

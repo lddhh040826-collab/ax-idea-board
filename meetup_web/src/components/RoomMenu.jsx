@@ -8,9 +8,9 @@ export default function RoomMenu({ room, isHost, onClose, onChange, onError, onG
   const [title, setTitle] = useState(room.title)
   const [password, setPassword] = useState('')
 
-  const run = (fn, done) => {
+  const run = async (fn, done) => {
     try {
-      fn()
+      await fn()
       onChange(done)
     } catch (err) {
       onError(err.message)
@@ -46,10 +46,10 @@ export default function RoomMenu({ room, isHost, onClose, onChange, onError, onG
             <button
               type="button"
               className="btn danger wide"
-              onClick={() => {
+              onClick={async () => {
                 if (!window.confirm(`'${room.title}' 방을 삭제할까요?\n삭제하면 되돌릴 수 없어요.`)) return
                 try {
-                  deleteRoom(room.id)
+                  await deleteRoom(room.id)
                   onGone('방을 삭제했어요')
                 } catch (err) {
                   onError(err.message)
@@ -63,10 +63,10 @@ export default function RoomMenu({ room, isHost, onClose, onChange, onError, onG
           <button
             type="button"
             className="btn danger wide"
-            onClick={() => {
+            onClick={async () => {
               if (!window.confirm(`'${room.title}' 방에서 나갈까요?\n내가 표시한 날짜와 메모도 함께 지워져요.`)) return
               try {
-                leaveRoom(room.id)
+                await leaveRoom(room.id)
                 onGone('방에서 나왔어요')
               } catch (err) {
                 onError(err.message)

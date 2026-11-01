@@ -12,22 +12,26 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [goTo, setGoTo] = useState(null)
+  const [busy, setBusy] = useState(false)
   if (session) return <Navigate to={goTo ?? '/'} replace />
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault()
+    setBusy(true)
     try {
       let next
-      if (accountExists(name)) {
-        next = signIn(name, password)
+      if (await accountExists(name)) {
+        next = await signIn(name, password)
       } else {
         if (!window.confirm(`'${name.trim()}'은(는) 처음 보는 이름이에요.\n이 이름과 비밀번호로 새로 가입할까요?`)) return
-        next = signUp(name, password)
+        next = await signUp(name, password)
       }
       setGoTo(takeReturnPath() ?? '/')
       setSession(next)
     } catch (err) {
       setError(err.message)
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -54,8 +58,8 @@ export default function Login() {
             />
           </label>
           {error && <p className="error">{error}</p>}
-          <button className="btn primary wide" type="submit" disabled={!name.trim() || [...password].length !== AUTH_LIMITS.password}>
-            들어가기
+          <button className="btn primary wide" type="submit" disabled={busy || !name.trim() || [...password].length !== AUTH_LIMITS.password}>
+            {busy ? '확인 중…' : '들어가기'}
           </button>
           <p className="muted small center-text">처음이면 이 이름으로 바로 가입돼요. 이름은 방 안에서 그대로 보여요.</p>
         </form>

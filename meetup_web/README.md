@@ -2,7 +2,10 @@
 
 친구들이 달력에서 **안 되는 날만 X** 치면, 표시하지 않은 날을 되는 날로 세어 **모두 되는 날**을 바로 보여 준다. 방장이 그중 하루를 확정한다.
 
-지금은 **체험판**이다. 계정과 방이 이 브라우저(localStorage)에만 저장되므로, 친구가 자기 폰에서 링크를 열면 방이 보이지 않는다. 실제로 함께 쓰려면 서버 저장을 붙여야 한다 → [docs/handoff.md](docs/handoff.md)
+저장 방식은 두 가지다.
+
+- **서버 모드**: `VITE_SUPABASE_URL`·`VITE_SUPABASE_ANON_KEY`가 있으면 Supabase에 저장한다. 친구들이 각자 폰에서 같은 방을 쓴다. 인터넷에 올리는 방법 → [docs/deploy.md](docs/deploy.md)
+- **체험판**: 두 값이 없으면 이 브라우저(localStorage)에만 저장한다. 서버 없이 화면을 확인할 때 쓴다.
 
 ## 문서
 
@@ -10,6 +13,7 @@
 |---|---|
 | [docs/PRD.md](docs/PRD.md) | 누가, 왜, 무엇을 만드는가 (6질문 + 한 단락 PRD) |
 | [docs/architecture.md](docs/architecture.md) | 폴더 구조, 계층, 데이터 모델, 화면 모드, 서버로 옮기는 방법 |
+| [docs/deploy.md](docs/deploy.md) | Supabase·Vercel로 인터넷에 올리는 따라 하기 |
 | [docs/handoff.md](docs/handoff.md) | 샘플 방 하나로 따라가는 데이터 흐름, 지금 상태, 이어서 할 일, 남은 질문 |
 
 ## 실행
