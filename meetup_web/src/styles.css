@@ -93,6 +93,17 @@ a { color: inherit; }
 @media (max-width: 380px) { .theme-label { display: none; } }
 .brand-mark { width: 22px; height: 22px; border-radius: 5px; border: 2px solid var(--ink); background: linear-gradient(var(--red) 0 38%, var(--paper) 38%); }
 .who { display: flex; align-items: center; gap: .6rem; font-size: .9rem; }
+.member-panel { position: fixed; top: 88px; right: 16px; width: 270px; max-height: calc(100vh - 110px); overflow: auto; background: var(--paper); border: 1.5px solid var(--line); border-radius: var(--radius); box-shadow: 0 10px 30px rgba(0, 0, 0, .18); padding: 14px 14px 16px; z-index: 8; animation: slide-in .2s ease-out; }
+.member-panel h2 { font-size: 1rem; display: flex; align-items: baseline; gap: .4rem; }
+.member-list { list-style: none; margin: .6rem 0 0; padding: 0; display: grid; gap: .45rem; }
+.member-list li { display: flex; justify-content: space-between; align-items: center; gap: .5rem; padding: .45rem .55rem; border-radius: 10px; background: var(--paper-2); }
+.member-name { min-width: 0; overflow-wrap: anywhere; }
+.member-state { flex: none; font-size: .78rem; color: var(--muted); }
+.member-state.done { color: var(--red); font-weight: 700; }
+.tag.me { background: var(--paper); color: var(--ink); border: 1px solid var(--line); }
+.member-toggle { position: fixed; right: 0; top: 50%; transform: translateY(-50%); z-index: 8; border: 1.5px solid var(--line); border-right: 0; border-radius: 12px 0 0 12px; background: var(--paper); color: var(--ink); font: inherit; font-size: .85rem; padding: .7rem .6rem; box-shadow: var(--shadow); cursor: pointer; writing-mode: vertical-rl; }
+@keyframes slide-in { from { opacity: 0; transform: translateX(16px); } }
+@media (max-width: 600px) { .member-panel { top: 76px; right: 12px; width: min(280px, calc(100vw - 24px)); } }
 .tag { font-style: normal; font-size: .7rem; background: var(--red-soft); color: var(--red); padding: .1rem .45rem; border-radius: 999px; margin-left: .3rem; }
 
 .page { max-width: 760px; margin: 0 auto; padding: 22px 16px 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; }

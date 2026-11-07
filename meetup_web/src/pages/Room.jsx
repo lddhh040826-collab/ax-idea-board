@@ -1,10 +1,11 @@
 // 방 하나: (처음이면) 방 암호로 참여 → [내 날짜 | 결과]. 방 안의 내 이름은 로그인한 계정 이름
 import { useCallback, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { roomLink, saveOffDays } from '../api/rooms.js'
+import { LIMITS, renameRoom, roomLink, saveOffDays } from '../api/rooms.js'
 import CopyButton from '../components/CopyButton.jsx'
 import DateDetail from '../components/DateDetail.jsx'
 import InviteMaker from '../components/InviteMaker.jsx'
+import MemberPanel from '../components/MemberPanel.jsx'
 import MonthCalendar from '../components/MonthCalendar.jsx'
 import PasswordGate from '../components/PasswordGate.jsx'
 import ResultPanel from '../components/ResultPanel.jsx'
@@ -23,6 +24,10 @@ export default function Room() {
   const [picked, setPicked] = useState(null)
   const [menu, setMenu] = useState(false)
   const [invite, setInvite] = useState(false)
+  // 방에 들어오면 모임원 패널을 열어 둔다
+  const [members, setMembers] = useState(true)
+  // 방장이 방 이름을 고치는 중이면 입력칸의 값, 아니면 null
+  const [titleDraft, setTitleDraft] = useState(null)
   const [saved, setSaved] = useState(null)
   // 결과 보기에서 고른 기간 { from, to }. null이면 전체 기간. 탭을 바꿔도 유지한다
   const [period, setPeriod] = useState(null)
@@ -102,11 +107,35 @@ export default function Room() {
       )}
 
       <Sheet band={room.title}>
+        {titleDraft !== null && (
+          <form
+            className="row top-gap"
+            onSubmit={async (e) => {
+              e.preventDefault()
+              try {
+                await renameRoom(id, titleDraft)
+                setTitleDraft(null)
+                done('모임 이름을 바꿨어요')
+              } catch (err) {
+                push(err.message, 'error')
+              }
+            }}
+          >
+            <input value={titleDraft} maxLength={LIMITS.title} autoFocus aria-label="모임 이름" onChange={(e) => setTitleDraft(e.target.value)} />
+            <button className="btn primary" type="submit" disabled={!titleDraft.trim()}>저장</button>
+            <button className="btn" type="button" onClick={() => setTitleDraft(null)}>취소</button>
+          </form>
+        )}
         <div className="row between wrap">
           <p>
             <b>{me.name}</b>님으로 참여 중 · <span className="muted">{profiles.map((p) => p.name).join(', ')}</span>
           </p>
-          <button type="button" className="btn" onClick={() => setMenu(true)}>방 메뉴</button>
+          <div className="row">
+            {isHost && titleDraft === null && (
+              <button type="button" className="btn" onClick={() => setTitleDraft(room.title)}>이름 수정</button>
+            )}
+            <button type="button" className="btn" onClick={() => setMenu(true)}>방 메뉴</button>
+          </div>
         </div>
 
         <div className="tabs" role="tablist">
@@ -183,6 +212,15 @@ export default function Room() {
           onError={(m) => push(m, 'error')}
         />
       )}
+      <MemberPanel
+        profiles={profiles}
+        offRows={offRows}
+        hostName={room.hostUser}
+        meId={me.id}
+        open={members}
+        onOpen={() => setMembers(true)}
+        onClose={() => setMembers(false)}
+      />
       <Toasts toasts={toasts} />
     </>
   )
