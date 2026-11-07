@@ -1,4 +1,4 @@
-// 결과: 기간 고르기 → 날짜 순위(되는 사람이 많은 순) → 달력. 날짜를 누르면 상세(onPick)
+// 결과: 기간 고르기 → 달력 → 날짜 순위(되는 사람이 많은 순). 날짜를 누르면 상세(onPick)
 // 고른 기간(period) 밖의 날은 순위와 달력 모두에서 뺀다
 import { useState } from 'react'
 import { ranking } from '../lib/tally.js'
@@ -68,6 +68,15 @@ export default function ResultPanel({ table, profiles, start, end, period, onPer
       </section>
 
       <section>
+        <h2 className="section">달력으로 보기</h2>
+        <MonthCalendar key={`${from}~${to}`} mode="view" start={from} end={to} table={table} total={total} confirmedDate={confirmedDate} onPick={onPick} />
+        <div className="legend muted small">
+          <span><i className="swatch solid" /> 모두 됨</span>
+          <span><i className="swatch dim" /> 안 되는 사람 있음 (적게 될수록 흐림)</span>
+        </div>
+      </section>
+
+      <section>
         <h2 className="section">
           날짜 순위
           {best > 0 && <span className="muted small">최대 {best}/{total}명 참석 가능</span>}
@@ -98,15 +107,6 @@ export default function ResultPanel({ table, profiles, start, end, period, onPer
             더 보기 ({ranked.length - shown}개 남음)
           </button>
         )}
-      </section>
-
-      <section>
-        <h2 className="section">달력으로 보기</h2>
-        <MonthCalendar key={`${from}~${to}`} mode="view" start={from} end={to} table={table} total={total} confirmedDate={confirmedDate} onPick={onPick} />
-        <div className="legend muted small">
-          <span><i className="swatch solid" /> 모두 됨</span>
-          <span><i className="swatch dim" /> 안 되는 사람 있음 (적게 될수록 흐림)</span>
-        </div>
       </section>
     </div>
   )
