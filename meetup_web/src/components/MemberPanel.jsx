@@ -1,8 +1,8 @@
-// 방 오른쪽에 뜨는 모임원 패널: 이름, 방장·나 표시, 안 되는 날을 입력했는지
-// 「입력함」은 안 되는 날을 하루라도 표시했다는 뜻이다 (모든 날이 되는 사람은 표시할 게 없어 「아직」으로 보인다)
+// 모임 오른쪽에 뜨는 모임원 패널: 이름, 모임장·나 표시, 날짜를 입력했으면 ✓
+// ✓는 불가능한 날을 하루라도 표시했다는 뜻이다 (모든 날이 가능한 사람은 표시할 게 없어 ✓가 없다)
 import { LIMITS } from '../api/rooms.js'
 
-export default function MemberPanel({ profiles, offRows, hostName, meId, open, onOpen, onClose }) {
+export default function MemberPanel({ profiles, offRows, hostId, meId, open, onOpen, onClose }) {
   const counts = new Map()
   for (const r of offRows) counts.set(r.profileId, (counts.get(r.profileId) ?? 0) + 1)
   const done = profiles.filter((p) => counts.has(p.id)).length
@@ -29,10 +29,10 @@ export default function MemberPanel({ profiles, offRows, hostName, meId, open, o
             <li key={p.id}>
               <span className="member-name">
                 <b>{p.name}</b>
-                {p.name === hostName && <em className="tag">방장</em>}
+                {p.id === hostId && <em className="tag">모임장</em>}
                 {p.id === meId && <em className="tag me">나</em>}
               </span>
-              {n ? <span className="member-state done">✓ 입력함 · {n}일</span> : <span className="member-state">아직</span>}
+              {n > 0 && <span className="member-state done" title={`불가능한 날 ${n}일 입력함`} aria-label="날짜 입력함">✓</span>}
             </li>
           )
         })}

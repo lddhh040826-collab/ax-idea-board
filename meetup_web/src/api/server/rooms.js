@@ -1,6 +1,7 @@
 // 방 (서버판): 브라우저 저장판(../local/rooms.js)과 같은 이름·같은 결과 모양
 // 누가 무엇을 읽고 쓸 수 있는지는 DB의 RLS와 함수가 막는다(supabase/schema.sql). 여기 확인은 빠른 안내용이다
-import { LIMITS } from '../limits.js'
+import { checkAppointment, checkDate } from '../../lib/appointments.js'
+import { AUTH_LIMITS, LIMITS } from '../limits.js'
 import { ensureDevice, must, rpc, sb } from './client.js'
 import { publish } from './realtime.js'
 
@@ -12,9 +13,16 @@ function fail(message) {
 
 function checkTitle(title) {
   const t = title.trim()
-  if (!t) fail('방 이름을 적어 주세요')
-  if (t.length > LIMITS.title) fail(`방 이름은 최대 ${LIMITS.title}글자예요`)
+  if (!t) fail('모임 이름을 적어 주세요')
+  if (t.length > LIMITS.title) fail(`모임 이름은 최대 ${LIMITS.title}글자예요`)
   return t
+}
+
+function checkName(name) {
+  const n = name.trim()
+  if (!n) fail('이름을 적어 주세요')
+  if (n.length > AUTH_LIMITS.name) fail(`이름은 최대 ${AUTH_LIMITS.name}글자예요`)
+  return n
 }
 
 function checkPassword(password) {
@@ -43,20 +51,23 @@ export async function loadRoom(roomId) {
     if (!preview) return null
     return { room: { id: preview.id, title: preview.title }, isHost: false, me: null, profiles: [], offRows: [], notes: [] }
   }
-  const [members, offDays, notes] = await Promise.all([
+  const [members, offDays, notes, appointments] = await Promise.all([
     sb().from('members').select('user_id, name, created_at').eq('room_id', roomId).order('created_at').then(must),
     sb().from('off_days').select('user_id, date').eq('room_id', roomId).then(must),
     sb().from('notes').select('user_id, date, text, updated_at').eq('room_id', roomId).then(must),
+    // 약속 표(11/24)를 아직 DB에 만들지 않았으면 약속 없이 연다 (supabase/schema.sql을 다시 실행하면 생긴다)
+    sb().from('appointments').select('id, date, title, category, created_at').eq('room_id', roomId).order('created_at').then((res) => (res.error ? [] : res.data)),
   ])
   const profiles = members.map((m) => ({ id: m.user_id, name: m.name, createdAt: m.created_at }))
   const nameOf = (id) => profiles.find((p) => p.id === id)?.name ?? ''
   return {
-    room: { id: found.id, title: found.title, hostUser: nameOf(found.host_id), confirmedDate: found.confirmed_date, createdAt: found.created_at },
+    room: { id: found.id, title: found.title, hostUser: nameOf(found.host_id), hostId: found.host_id, confirmedDate: found.confirmed_date, createdAt: found.created_at },
     isHost: Boolean(me) && found.host_id === me.id,
     me: profiles.find((p) => p.id === me?.id) ?? null,
     profiles,
     offRows: offDays.map((r) => ({ profileId: r.user_id, date: r.date })),
     notes: notes.map((n) => ({ date: n.date, profileId: n.user_id, name: nameOf(n.user_id), text: n.text, updatedAt: n.updated_at })),
+    appointments: appointments.map((a) => ({ id: a.id, roomId, date: a.date, title: a.title, category: a.category, createdAt: a.created_at })),
   }
 }
 
@@ -91,8 +102,8 @@ export async function joinRoom(roomId, password) {
 export async function leaveRoom(roomId) {
   const me = await whoami()
   const [room] = must(await sb().from('rooms').select('host_id').eq('id', roomId))
-  if (!room) fail('방을 찾을 수 없어요')
-  if (room.host_id === me.id) fail('방장은 나갈 수 없어요. 방을 삭제해 주세요')
+  if (!room) fail('모임을 찾을 수 없어요')
+  if (room.host_id === me.id) fail('모임장은 나갈 수 없어요. 모임을 삭제해 주세요')
   must(await sb().from('members').delete().eq('room_id', roomId).eq('user_id', me.id))
   publish({ type: 'room_changed', roomId })
 }
@@ -104,7 +115,9 @@ export async function saveOffDays(roomId, changes) {
   const remove = changes.filter((c) => !c.off).map((c) => c.date)
   if (add.length) must(await sb().from('off_days').upsert(add, { onConflict: 'room_id,user_id,date', ignoreDuplicates: true }))
   if (remove.length) must(await sb().from('off_days').delete().eq('room_id', roomId).eq('user_id', me.id).in('date', remove))
-  publish({ type: 'offdays_changed', roomId, name: me.name })
+  // 알림에는 모임 안에서 쓰는 이름을 보낸다
+  const [member] = must(await sb().from('members').select('name').eq('room_id', roomId).eq('user_id', me.id))
+  publish({ type: 'offdays_changed', roomId, name: member?.name ?? me.name })
 }
 
 // 날짜별 메모. 빈 글이면 그 날짜의 내 메모를 지운다
@@ -123,22 +136,54 @@ export async function saveNote(roomId, date, text) {
 // 방장만 바꿀 수 있는 칸. RLS에 막히면 0줄이 바뀌므로 그때 안내한다
 async function hostUpdate(roomId, values) {
   const rows = must(await sb().from('rooms').update(values).eq('id', roomId).select('id'))
-  if (!rows.length) fail('방장만 할 수 있어요')
+  if (!rows.length) fail('모임장만 할 수 있어요')
   publish({ type: 'room_changed', roomId })
 }
 
-export async function confirmDate(roomId, date) {
-  await hostUpdate(roomId, { confirmed_date: date })
+// 약속 (모임장만). 누가 쓸 수 있는지는 DB의 RLS가 막는다(supabase/schema.sql 「약속」)
+export async function createAppointment(roomId, input) {
+  const a = checkAppointment(input)
+  const [row] = must(await sb().from('appointments').insert({ room_id: roomId, ...a }).select('id'))
+  if (!row) fail('모임장만 할 수 있어요')
+  publish({ type: 'room_changed', roomId })
+  return { id: row.id, roomId, ...a, date: null }
 }
 
-export async function cancelConfirm(roomId) {
-  await hostUpdate(roomId, { confirmed_date: null })
+// 날짜 확정(date) 또는 확정 취소(null). 같은 날짜에는 약속 하나 (DB의 unique도 막는다)
+export async function setAppointmentDate(roomId, id, date) {
+  const d = checkDate(date)
+  if (d) {
+    const [dup] = must(await sb().from('appointments').select('id').eq('room_id', roomId).eq('date', d).neq('id', id))
+    if (dup) fail('이 날짜에는 이미 다른 약속이 있어요')
+  }
+  const rows = must(await sb().from('appointments').update({ date: d }).eq('id', id).eq('room_id', roomId).select('id'))
+  if (!rows.length) fail('모임장만 할 수 있어요')
+  publish({ type: 'room_changed', roomId })
+}
+
+export async function updateAppointment(roomId, id, input) {
+  const { title, category } = checkAppointment(input)
+  const rows = must(await sb().from('appointments').update({ title, category }).eq('id', id).eq('room_id', roomId).select('id'))
+  if (!rows.length) fail('모임장만 할 수 있어요')
+  publish({ type: 'room_changed', roomId })
+}
+
+export async function deleteAppointment(roomId, id) {
+  const rows = must(await sb().from('appointments').delete().eq('id', id).eq('room_id', roomId).select('id'))
+  if (!rows.length) fail('모임장만 할 수 있어요')
+  publish({ type: 'room_changed', roomId })
+}
+
+// 모임 안의 내 이름 바꾸기 (계정 이름은 그대로). 같은 모임 안 중복은 DB 함수가 막는다
+export async function renameMe(roomId, name) {
+  await rpc('rename_member', { r: roomId, n: checkName(name) })
+  publish({ type: 'room_changed', roomId })
 }
 
 export async function renameRoom(roomId, title) {
   const t = checkTitle(title)
   const [room] = must(await sb().from('rooms').select('title').eq('id', roomId))
-  if (room?.title === t) fail('현재 방 이름과 같아요')
+  if (room?.title === t) fail('현재 모임 이름과 같아요')
   await hostUpdate(roomId, { title: t })
 }
 
@@ -148,6 +193,6 @@ export async function changePassword(roomId, password) {
 
 export async function deleteRoom(roomId) {
   const rows = must(await sb().from('rooms').delete().eq('id', roomId).select('id'))
-  if (!rows.length) fail('방장만 할 수 있어요')
+  if (!rows.length) fail('모임장만 할 수 있어요')
   publish({ type: 'room_deleted', roomId })
 }

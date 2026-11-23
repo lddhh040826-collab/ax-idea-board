@@ -61,7 +61,7 @@ export default function Login() {
           <button className="btn primary wide" type="submit" disabled={busy || !name.trim() || [...password].length !== AUTH_LIMITS.password}>
             {busy ? '확인 중…' : '들어가기'}
           </button>
-          <p className="muted small center-text">처음이면 이 이름으로 바로 가입돼요. 이름은 방 안에서 그대로 보여요.</p>
+          <p className="muted small center-text">처음이면 이 이름으로 바로 가입돼요. 이름은 모임 안에서 그대로 보여요.</p>
         </form>
       </Sheet>
     </>

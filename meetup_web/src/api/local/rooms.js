@@ -1,7 +1,8 @@
 // 방 (브라우저 저장판): 만들기, 암호로 입장, 안 되는 날, 메모, 확정. 서버판은 ../server/rooms.js
 // 로그인한 계정 = 방 안의 내 프로필. 방장 확인도 계정 이름으로 한다.
 import { currentUser, getSession } from './auth.js'
-import { LIMITS } from '../limits.js'
+import { checkAppointment, checkDate } from '../../lib/appointments.js'
+import { AUTH_LIMITS, LIMITS } from '../limits.js'
 import { newId, publish, readDb, update } from './store.js'
 
 function fail(message) {
@@ -10,9 +11,17 @@ function fail(message) {
 
 function checkTitle(title) {
   const t = title.trim()
-  if (!t) fail('방 이름을 적어 주세요')
-  if (t.length > LIMITS.title) fail(`방 이름은 최대 ${LIMITS.title}글자예요`)
+  if (!t) fail('모임 이름을 적어 주세요')
+  if (t.length > LIMITS.title) fail(`모임 이름은 최대 ${LIMITS.title}글자예요`)
   return t
+}
+
+// 모임 안에서 쓰는 내 이름(닉네임). 계정 이름과 같은 길이 제한
+function checkName(name) {
+  const n = name.trim()
+  if (!n) fail('이름을 적어 주세요')
+  if (n.length > AUTH_LIMITS.name) fail(`이름은 최대 ${AUTH_LIMITS.name}글자예요`)
+  return n
 }
 
 function checkPassword(password) {
@@ -23,8 +32,8 @@ function checkPassword(password) {
 // 방장만 할 수 있는 일
 function hostRoom(db, roomId) {
   const room = db.rooms[roomId]
-  if (!room) fail('방을 찾을 수 없어요')
-  if (room.hostUser !== currentUser()) fail('방장만 할 수 있어요')
+  if (!room) fail('모임을 찾을 수 없어요')
+  if (room.hostUser !== currentUser()) fail('모임장만 할 수 있어요')
   return room
 }
 
@@ -63,13 +72,17 @@ export function loadRoom(roomId) {
   if (!found) return null
   const { password: _, ...room } = found
   const user = getSession()?.name ?? null
+  const profiles = db.profiles.filter((p) => p.roomId === roomId)
+  const nameOf = (id) => profiles.find((p) => p.id === id)?.name ?? ''
   return {
-    room,
+    // hostId: 모임장 프로필 id (이름은 모임 안에서 바뀔 수 있어 id로 표시한다)
+    room: { ...room, hostId: profiles.find((p) => p.user === room.hostUser)?.id ?? null },
     isHost: Boolean(user) && room.hostUser === user,
     me: user ? myProfile(db, roomId, user) : null,
-    profiles: db.profiles.filter((p) => p.roomId === roomId),
+    profiles,
     offRows: db.offDays.filter((r) => r.roomId === roomId),
-    notes: db.notes.filter((n) => n.roomId === roomId),
+    notes: db.notes.filter((n) => n.roomId === roomId).map((n) => ({ ...n, name: nameOf(n.profileId) || n.name })),
+    appointments: db.appointments.filter((a) => a.roomId === roomId),
   }
 }
 
@@ -98,10 +111,10 @@ export function listMyRooms() {
 export function joinRoom(roomId, password) {
   update((db) => {
     const room = db.rooms[roomId]
-    if (!room) fail('방을 찾을 수 없어요')
+    if (!room) fail('모임을 찾을 수 없어요')
     if (myProfile(db, roomId)) return
     if (room.password !== password) fail('비밀번호가 틀려요')
-    if (db.profiles.filter((p) => p.roomId === roomId).length >= LIMITS.members) fail(`이 방은 최대 ${LIMITS.members}명까지예요`)
+    if (db.profiles.filter((p) => p.roomId === roomId).length >= LIMITS.members) fail(`이 모임은 최대 ${LIMITS.members}명까지예요`)
     db.profiles.push(newProfile(roomId, currentUser()))
   })
   publish({ type: 'room_changed', roomId })
@@ -111,8 +124,8 @@ export function joinRoom(roomId, password) {
 export function leaveRoom(roomId) {
   update((db) => {
     const room = db.rooms[roomId]
-    if (!room) fail('방을 찾을 수 없어요')
-    if (room.hostUser === currentUser()) fail('방장은 나갈 수 없어요. 방을 삭제해 주세요')
+    if (!room) fail('모임을 찾을 수 없어요')
+    if (room.hostUser === currentUser()) fail('모임장은 나갈 수 없어요. 모임을 삭제해 주세요')
     const me = myProfile(db, roomId)
     if (!me) return
     db.profiles = db.profiles.filter((p) => p.id !== me.id)
@@ -127,8 +140,8 @@ export function saveOffDays(roomId, changes) {
   let me
   update((db) => {
     const room = db.rooms[roomId]
-    if (!room) fail('방을 찾을 수 없어요')
-    me = myProfile(db, roomId) ?? fail('이 방에 참여하지 않았어요')
+    if (!room) fail('모임을 찾을 수 없어요')
+    me = myProfile(db, roomId) ?? fail('이 모임에 참여하지 않았어요')
     for (const { date, off } of changes) {
       const i = db.offDays.findIndex((r) => r.roomId === roomId && r.profileId === me.id && r.date === date)
       if (off && i < 0) db.offDays.push({ roomId, profileId: me.id, date })
@@ -143,23 +156,67 @@ export function saveNote(roomId, date, text) {
   const t = text.trim()
   if (t.length > LIMITS.note) fail(`메모는 최대 ${LIMITS.note}자예요`)
   update((db) => {
-    const me = myProfile(db, roomId) ?? fail('이 방에 참여하지 않았어요')
+    const me = myProfile(db, roomId) ?? fail('이 모임에 참여하지 않았어요')
     db.notes = db.notes.filter((n) => !(n.roomId === roomId && n.date === date && n.profileId === me.id))
     if (t) db.notes.push({ roomId, date, profileId: me.id, name: me.name, text: t, updatedAt: new Date().toISOString() })
   })
   publish({ type: 'room_changed', roomId })
 }
 
-export function confirmDate(roomId, date) {
+// 약속 (모임장만): 먼저 이름·카테고리로 만들고(날짜 미정), 날짜는 setAppointmentDate로 확정한다.
+// 불가능한 날 표시는 그대로 남는다
+export function createAppointment(roomId, input) {
+  const a = checkAppointment(input)
+  const created = update((db) => {
+    hostRoom(db, roomId)
+    const row = { id: newId(8), roomId, ...a, date: null, createdAt: new Date().toISOString() }
+    db.appointments.push(row)
+    return row
+  })
+  publish({ type: 'room_changed', roomId })
+  return created
+}
+
+export function updateAppointment(roomId, id, input) {
+  const { title, category } = checkAppointment(input)
   update((db) => {
-    hostRoom(db, roomId).confirmedDate = date
+    hostRoom(db, roomId)
+    const a = db.appointments.find((x) => x.id === id && x.roomId === roomId) ?? fail('약속을 찾을 수 없어요')
+    a.title = title
+    a.category = category
   })
   publish({ type: 'room_changed', roomId })
 }
 
-export function cancelConfirm(roomId) {
+// 날짜 확정(date) 또는 확정 취소(null). 같은 날짜에는 약속 하나
+export function setAppointmentDate(roomId, id, date) {
+  const d = checkDate(date)
   update((db) => {
-    hostRoom(db, roomId).confirmedDate = null
+    hostRoom(db, roomId)
+    const a = db.appointments.find((x) => x.id === id && x.roomId === roomId) ?? fail('약속을 찾을 수 없어요')
+    if (d && db.appointments.some((x) => x.roomId === roomId && x.id !== id && x.date === d)) fail('이 날짜에는 이미 다른 약속이 있어요')
+    a.date = d
+  })
+  publish({ type: 'room_changed', roomId })
+}
+
+export function deleteAppointment(roomId, id) {
+  update((db) => {
+    hostRoom(db, roomId)
+    db.appointments = db.appointments.filter((x) => !(x.id === id && x.roomId === roomId))
+  })
+  publish({ type: 'room_changed', roomId })
+}
+
+// 모임 안의 내 이름 바꾸기 (계정 이름은 그대로)
+export function renameMe(roomId, name) {
+  const n = checkName(name)
+  update((db) => {
+    if (!db.rooms[roomId]) fail('모임을 찾을 수 없어요')
+    const me = myProfile(db, roomId) ?? fail('이 모임에 참여하지 않았어요')
+    if (me.name === n) fail('지금 이름과 같아요')
+    if (db.profiles.some((p) => p.roomId === roomId && p.id !== me.id && p.name === n)) fail('이 모임에 같은 이름이 있어요')
+    me.name = n
   })
   publish({ type: 'room_changed', roomId })
 }
@@ -168,7 +225,7 @@ export function renameRoom(roomId, title) {
   const t = checkTitle(title)
   update((db) => {
     const room = hostRoom(db, roomId)
-    if (room.title === t) fail('현재 방 이름과 같아요')
+    if (room.title === t) fail('현재 모임 이름과 같아요')
     room.title = t
   })
   publish({ type: 'room_changed', roomId })
@@ -188,6 +245,7 @@ export function deleteRoom(roomId) {
     db.profiles = db.profiles.filter((p) => p.roomId !== roomId)
     db.offDays = db.offDays.filter((r) => r.roomId !== roomId)
     db.notes = db.notes.filter((n) => n.roomId !== roomId)
+    db.appointments = db.appointments.filter((a) => a.roomId !== roomId)
   })
   publish({ type: 'room_deleted', roomId })
 }

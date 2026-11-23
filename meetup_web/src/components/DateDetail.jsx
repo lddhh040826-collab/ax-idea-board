@@ -1,13 +1,19 @@
-// 날짜 하나: 되는 사람 / 안 되는 사람, 메모, (방장) 이 날로 확정
+// 날짜 하나: 가능한 사람 / 불가능한 사람, 메모, (모임장) 이 날짜로 확정할 약속 고르기
 import { useState } from 'react'
-import { LIMITS, cancelConfirm, confirmDate, saveNote } from '../api/rooms.js'
-import { formatDateLong } from '../lib/dates.js'
+import { LIMITS, saveNote, setAppointmentDate } from '../api/rooms.js'
+import { categoryLabel, splitAppointments } from '../lib/appointments.js'
+import { formatDate, formatDateLong } from '../lib/dates.js'
 import Dialog from './Dialog.jsx'
 
-export default function DateDetail({ room, date, entry, notes, me, isHost, onClose, onChange, onError }) {
+export default function DateDetail({ room, date, entry, notes, me, isHost, appointment, appointments = [], onOpenAppointment, onCreateAppointment, onClose, onChange, onError }) {
   const mineNote = notes.find((n) => n.profileId === me.id)
   const [text, setText] = useState(mineNote?.text ?? '')
-  const confirmed = room.confirmedDate === date
+  // 이 날짜로 확정할 수 있는 약속: 날짜 미정 먼저, 그다음 이미 날짜가 있는 다가오는 약속(날짜 옮기기)
+  const { pending, upcoming } = splitAppointments(appointments)
+  const choices = [...pending, ...upcoming]
+  const [picked, setChosen] = useState(null)
+  // 새 약속을 막 만들었거나 고른 약속이 사라져도 늘 하나는 골라 둔다
+  const chosen = choices.some((x) => x.id === picked) ? picked : choices[0]?.id ?? null
 
   const run = async (fn, done) => {
     try {
@@ -18,21 +24,18 @@ export default function DateDetail({ room, date, entry, notes, me, isHost, onClo
     }
   }
 
-  const confirm = () => {
-    const msg = room.confirmedDate
-      ? `확정 날짜를 ${formatDateLong(date)}(으)로 바꿀까요?`
-      : `${formatDateLong(date)}로 확정할까요?`
-    if (window.confirm(msg)) run(() => confirmDate(room.id, date), '날짜를 확정했어요')
-  }
-
-  const cancel = () => {
-    if (window.confirm('확정을 취소할까요?')) run(() => cancelConfirm(room.id), '확정을 취소했어요')
+  const confirm = async () => {
+    const a = choices.find((x) => x.id === chosen)
+    if (!a) return
+    if (a.date && !window.confirm(`'${a.title}' 약속은 ${formatDate(a.date)}로 정해져 있어요. ${formatDateLong(date)}로 옮길까요?`)) return
+    await run(() => setAppointmentDate(room.id, a.id, date), `'${a.title}' 약속을 ${formatDateLong(date)}로 확정했어요`)
+    onClose()
   }
 
   return (
     <Dialog title={formatDateLong(date)} onClose={onClose}>
-      <p><span className="yes">됨</span>{entry.ok.join(', ') || '없음'}</p>
-      <p><span className="no">안 됨</span>{entry.no.join(', ') || '없음'}</p>
+      <p><span className="yes">가능</span>{entry.ok.join(', ') || '없음'}</p>
+      <p><span className="no">불가능</span>{entry.no.join(', ') || '없음'}</p>
 
       <h3 className="section">메모</h3>
       {notes.length ? (
@@ -47,14 +50,29 @@ export default function DateDetail({ room, date, entry, notes, me, isHost, onClo
         <button className="btn" type="submit" disabled={text.trim() === (mineNote?.text ?? '')}>저장</button>
       </form>
 
-      {isHost && (
-        <div className="row wrap top-gap">
-          {confirmed ? (
-            <button type="button" className="btn wide" onClick={cancel}>날짜 확정 취소</button>
+      {appointment ? (
+        <button type="button" className="btn wide top-gap" onClick={() => onOpenAppointment(appointment)}>
+          이 날의 약속: <b>{appointment.title}</b> · {categoryLabel(appointment.category)}
+        </button>
+      ) : isHost && (
+        <section className="stack top-gap">
+          <h3 className="section">이 날짜로 확정할 약속</h3>
+          {choices.length ? (
+            <>
+              <div className="chips" role="radiogroup" aria-label="확정할 약속">
+                {choices.map((a) => (
+                  <button key={a.id} type="button" role="radio" aria-checked={chosen === a.id} className={`chip ${chosen === a.id ? 'on' : ''}`} onClick={() => setChosen(a.id)}>
+                    {a.title} <span className="muted small">{a.date ? `${formatDate(a.date)} → 옮기기` : categoryLabel(a.category)}</span>
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="btn primary wide" onClick={confirm} disabled={!chosen}>이 날짜로 확정</button>
+            </>
           ) : (
-            <button type="button" className="btn primary wide" onClick={confirm}>이 날로 확정</button>
+            <p className="muted small">확정할 약속이 없어요.</p>
           )}
-        </div>
+          <button type="button" className="link" onClick={onCreateAppointment}>+ 새 약속 만들기</button>
+        </section>
       )}
     </Dialog>
   )

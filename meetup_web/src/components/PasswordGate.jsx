@@ -23,8 +23,8 @@ export default function PasswordGate({ room, onJoin }) {
 
   return (
     <Sheet band="암호 입력" className="center">
-      <h1>{room.title} 방에 참여</h1>
-      <p className="muted small">방 암호는 방장에게 물어보세요. 한 번 들어가면 내 방 목록에 계속 남아요.</p>
+      <h1>{room.title} 모임에 참여</h1>
+      <p className="muted small">모임 암호는 모임장에게 물어보세요. 한 번 들어가면 내 모임 목록에 계속 남아요.</p>
       <form className="stack narrow" onSubmit={submit}>
         <input
           value={password}

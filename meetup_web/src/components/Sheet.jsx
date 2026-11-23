@@ -1,9 +1,11 @@
 // 탁상 달력 한 장 모양의 카드. 위쪽 빨간 띠에 링 구멍이 있다.
-export default function Sheet({ band, className = '', children }) {
+// action: 띠 오른쪽 끝에 놓을 버튼 (예: 모임 만들기)
+export default function Sheet({ band, action, className = '', children }) {
   return (
     <section className={`sheet ${className}`}>
-      <div className="sheet-band">
-        <span>{band}</span>
+      <div className={`sheet-band ${action ? 'has-action' : ''}`}>
+        <span className="sheet-band-title">{band}</span>
+        {action && <span className="sheet-band-action">{action}</span>}
       </div>
       <div className="sheet-body">{children}</div>
     </section>

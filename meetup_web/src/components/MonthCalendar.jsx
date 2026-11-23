@@ -6,7 +6,7 @@
 import { useRef, useState } from 'react'
 import { dayClass, daysLeftInMonth, monthCells, monthsBetween, today } from '../lib/dates.js'
 
-export default function MonthCalendar({ start, end, mode, mine = new Set(), table, total, confirmedDate, selected, disabled, onCommit, onPick }) {
+export default function MonthCalendar({ start, end, mode, mine = new Set(), table, total, confirmedDates = new Set(), selected, disabled, onCommit, onPick }) {
   const months = monthsBetween(start, end)
   // 오늘부터 보는데 이번 달이 일주일도 안 남았으면 다음 달부터 보여 준다 (직접 고른 기간은 시작 달부터)
   const [index, setIndex] = useState(() => (months.length > 1 && start === today() && daysLeftInMonth(start) < 7 ? 1 : 0))
@@ -92,7 +92,7 @@ export default function MonthCalendar({ start, end, mode, mine = new Set(), tabl
             'cal-day pick',
             dayClass(date),
             isMine(date) ? 'x' : '',
-            date === confirmedDate ? 'confirmed' : '',
+            confirmedDates.has(date) ? 'confirmed' : '',
             date === selected ? 'selected' : '',
             counted && ok === total ? 'all' : '',
           ]

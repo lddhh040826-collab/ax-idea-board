@@ -1,4 +1,4 @@
-// 결과: 기간 고르기 → 달력 → 날짜 순위(되는 사람이 많은 순). 날짜를 누르면 상세(onPick)
+// 결과: 기간 고르기 → 달력 → 날짜 순위(가능한 사람이 많은 순). 날짜를 누르면 상세(onPick)
 // 고른 기간(period) 밖의 날은 순위와 달력 모두에서 뺀다
 import { useState } from 'react'
 import { ranking } from '../lib/tally.js'
@@ -7,7 +7,9 @@ import MonthCalendar from './MonthCalendar.jsx'
 
 const SHOW = 8
 
-export default function ResultPanel({ table, profiles, start, end, period, onPeriod, confirmedDate, onPick }) {
+export default function ResultPanel({ table, profiles, start, end, period, onPeriod, appointments = [], onPick }) {
+  // 날짜 → 약속 (같은 날짜엔 약속 하나)
+  const apptOn = new Map(appointments.filter((a) => a.date).map((a) => [a.date, a]))
   const total = profiles.length
   const from = period?.from ?? start
   const to = period?.to ?? end
@@ -68,11 +70,10 @@ export default function ResultPanel({ table, profiles, start, end, period, onPer
       </section>
 
       <section>
-        <h2 className="section">달력으로 보기</h2>
-        <MonthCalendar key={`${from}~${to}`} mode="view" start={from} end={to} table={table} total={total} confirmedDate={confirmedDate} onPick={onPick} />
+        <MonthCalendar key={`${from}~${to}`} mode="view" start={from} end={to} table={table} total={total} confirmedDates={new Set(apptOn.keys())} onPick={onPick} />
         <div className="legend muted small">
-          <span><i className="swatch solid" /> 모두 됨</span>
-          <span><i className="swatch dim" /> 안 되는 사람 있음 (적게 될수록 흐림)</span>
+          <span><i className="swatch solid" /> 모두 가능</span>
+          <span><i className="swatch dim" /> 불가능한 사람 있음 (가능한 사람이 적을수록 흐림)</span>
         </div>
       </section>
 
@@ -85,15 +86,15 @@ export default function ResultPanel({ table, profiles, start, end, period, onPer
           <ol className="cards ranked">
             {ranked.slice(0, shown).map((r) => (
               <li key={r.date}>
-                <button type="button" className={`rec ${r.date === confirmedDate ? 'selected' : ''}`} onClick={() => onPick(r.date)}>
+                <button type="button" className={`rec ${apptOn.has(r.date) ? 'selected' : ''}`} onClick={() => onPick(r.date)}>
                   <span className={`rank ${r.rank === 1 ? 'first' : ''}`}>{r.rank}</span>
                   <div className="rec-body">
                     <div className="rec-head">
                       <p className={`rec-time ${dayClass(r.date)}`}>{formatDate(r.date)}</p>
-                      {r.date === confirmedDate && <em className="tag">확정</em>}
+                      {apptOn.has(r.date) && <em className="tag">약속 · {apptOn.get(r.date).title}</em>}
                       <span className={`pill ${r.no.length ? '' : 'full'}`}>{r.ok.length}/{total}명 가능</span>
                     </div>
-                    {r.no.length ? <p><span className="no">안 됨</span>{r.no.join(', ')}</p> : <p className="yes">모두 참석 가능</p>}
+                    {r.no.length ? <p><span className="no">불가능</span>{r.no.join(', ')}</p> : <p className="yes">모두 참석 가능</p>}
                   </div>
                 </button>
               </li>
