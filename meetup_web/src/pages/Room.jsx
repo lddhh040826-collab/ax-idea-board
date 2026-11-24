@@ -192,7 +192,6 @@ export default function Room() {
           appointment={appointments.find((a) => a.date === picked) ?? null}
           appointments={appointments}
           onOpenAppointment={(a) => { setPicked(null); setOpenAppt(a.id) }}
-          onCreateAppointment={() => setCreating(true)}
           onClose={() => setPicked(null)}
           onChange={done}
           onError={(m) => push(m, 'error')}

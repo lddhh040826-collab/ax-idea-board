@@ -45,7 +45,7 @@ export default function Login() {
         <form className="stack narrow" onSubmit={submit}>
           <label className="field">
             <span>이름 (아이디, 최대 {AUTH_LIMITS.name}글자)</span>
-            <input value={name} maxLength={AUTH_LIMITS.name} autoFocus autoComplete="username" onChange={(e) => { setName(e.target.value); setError('') }} placeholder="예: 다현" />
+            <input value={name} maxLength={AUTH_LIMITS.name} autoFocus autoComplete="username" onChange={(e) => { setName(e.target.value); setError('') }} placeholder="예: 홍길동" />
           </label>
           <label className="field">
             <span>비밀번호 ({AUTH_LIMITS.password}글자)</span>

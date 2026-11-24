@@ -2,8 +2,8 @@
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
-// 방에서 고를 수 있는 기간: 오늘부터 몇 달 뒤 말일까지
-export const WINDOW_MONTHS = 3
+// 모임에서 고를 수 있는 기간: 오늘부터 「올해 + 몇 년」의 12월 31일까지 (2026년이면 2027-12-31)
+export const WINDOW_YEARS = 1
 
 export function pad(n) {
   return String(n).padStart(2, '0')
@@ -34,11 +34,10 @@ export function addDays(date, days) {
   return toDateKey(d)
 }
 
-// 오늘 ~ (이번 달 + months - 1)의 말일
-export function windowRange(from = today(), months = WINDOW_MONTHS) {
-  const d = new Date(`${from}T00:00:00`)
-  const last = new Date(d.getFullYear(), d.getMonth() + months, 0)
-  return { start: from, end: toDateKey(last) }
+// 오늘 ~ (올해 + years)년 12월 31일
+export function windowRange(from = today(), years = WINDOW_YEARS) {
+  const year = Number(from.slice(0, 4)) + years
+  return { start: from, end: `${year}-12-31` }
 }
 
 // 기간이 걸쳐 있는 달 목록: [{ year, month(0~11) }]

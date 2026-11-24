@@ -5,15 +5,15 @@ import { categoryLabel, splitAppointments } from '../lib/appointments.js'
 import { formatDate, formatDateLong } from '../lib/dates.js'
 import Dialog from './Dialog.jsx'
 
-export default function DateDetail({ room, date, entry, notes, me, isHost, appointment, appointments = [], onOpenAppointment, onCreateAppointment, onClose, onChange, onError }) {
+export default function DateDetail({ room, date, entry, notes, me, isHost, appointment, appointments = [], onOpenAppointment, onClose, onChange, onError }) {
   const mineNote = notes.find((n) => n.profileId === me.id)
   const [text, setText] = useState(mineNote?.text ?? '')
   // 이 날짜로 확정할 수 있는 약속: 날짜 미정 먼저, 그다음 이미 날짜가 있는 다가오는 약속(날짜 옮기기)
   const { pending, upcoming } = splitAppointments(appointments)
   const choices = [...pending, ...upcoming]
+  // 모임장이 약속을 직접 골라야 [이 날짜로 확정]이 켜진다 (처음엔 아무것도 고르지 않음)
   const [picked, setChosen] = useState(null)
-  // 새 약속을 막 만들었거나 고른 약속이 사라져도 늘 하나는 골라 둔다
-  const chosen = choices.some((x) => x.id === picked) ? picked : choices[0]?.id ?? null
+  const chosen = choices.some((x) => x.id === picked) ? picked : null
 
   const run = async (fn, done) => {
     try {
@@ -57,21 +57,16 @@ export default function DateDetail({ room, date, entry, notes, me, isHost, appoi
       ) : isHost && (
         <section className="stack top-gap">
           <h3 className="section">이 날짜로 확정할 약속</h3>
-          {choices.length ? (
-            <>
-              <div className="chips" role="radiogroup" aria-label="확정할 약속">
-                {choices.map((a) => (
-                  <button key={a.id} type="button" role="radio" aria-checked={chosen === a.id} className={`chip ${chosen === a.id ? 'on' : ''}`} onClick={() => setChosen(a.id)}>
-                    {a.title} <span className="muted small">{a.date ? `${formatDate(a.date)} → 옮기기` : categoryLabel(a.category)}</span>
-                  </button>
-                ))}
-              </div>
-              <button type="button" className="btn primary wide" onClick={confirm} disabled={!chosen}>이 날짜로 확정</button>
-            </>
-          ) : (
-            <p className="muted small">확정할 약속이 없어요.</p>
+          {choices.length > 0 && (
+            <div className="chips" role="radiogroup" aria-label="확정할 약속">
+              {choices.map((a) => (
+                <button key={a.id} type="button" role="radio" aria-checked={chosen === a.id} className={`chip ${chosen === a.id ? 'on' : ''}`} onClick={() => setChosen(a.id)}>
+                  {a.title} <span className="muted small">{a.date ? `${formatDate(a.date)} → 옮기기` : categoryLabel(a.category)}</span>
+                </button>
+              ))}
+            </div>
           )}
-          <button type="button" className="link" onClick={onCreateAppointment}>+ 새 약속 만들기</button>
+          <button type="button" className="btn primary wide" onClick={confirm} disabled={!chosen}>이 날짜로 확정</button>
         </section>
       )}
     </Dialog>

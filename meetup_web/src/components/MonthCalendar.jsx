@@ -80,7 +80,7 @@ export default function MonthCalendar({ start, end, mode, mine = new Set(), tabl
           <span key={w} className={`cal-head ${i === 0 ? 'sun' : i === 6 ? 'sat' : ''}`}>{w}</span>
         ))}
         {monthCells(year, month).map((date, i) => {
-          if (!date) return <span key={`b${i}`} />
+          if (!date) return <span key={`b${i}`} className="cal-blank" aria-hidden="true" />
           const day = Number(date.slice(8))
           if (!inRange(date)) {
             return <span key={date} className={`cal-day off ${dayClass(date)}`}>{day}</span>
