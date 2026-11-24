@@ -304,3 +304,47 @@ p.yes { font-size: .85rem; }
   .overlay { align-items: center; }
   .dialog { border-radius: 18px; }
 }
+
+/* 빨간 띠: 오른쪽 끝 버튼, 제목 옆 연필 */
+.sheet-band.has-action { padding-left: 7.5rem; padding-right: 7.5rem; }
+.sheet-band-action { position: absolute; right: 10px; bottom: 6px; }
+.band-btn { display: inline-flex; align-items: center; gap: .2rem; padding: .08rem .55rem; border-radius: 999px; border: 1px solid var(--red-ink); background: transparent; color: var(--red-ink);
+  font: inherit; font-size: .7rem; font-weight: 700; line-height: 1.5; letter-spacing: 0; text-decoration: none; cursor: pointer; white-space: nowrap; }
+.band-btn:hover { background: var(--red-ink); color: var(--red); }
+.pencil { background: none; border: 0; padding: 0 .2rem; margin-right: .35rem; color: inherit; font: inherit; font-size: 1rem; letter-spacing: 0; cursor: pointer; opacity: .85; vertical-align: baseline; }
+.pencil:hover { opacity: 1; }
+.pencil-label { display: inline-flex; align-items: center; gap: .2rem; background: none; border: 1.5px solid var(--line); border-radius: 999px; padding: .15rem .6rem;
+  color: var(--ink); font: inherit; font-size: .85rem; font-weight: 600; cursor: pointer; margin-left: .4rem; }
+.pencil-label:hover { border-color: var(--ink); }
+.band-edit { display: inline-flex; gap: .3rem; align-items: center; letter-spacing: 0; }
+.band-edit input { min-height: 34px; padding: .2rem .6rem; font-size: .9rem; width: 9rem; color: var(--ink); }
+.band-edit button { min-height: 34px; padding: .2rem .7rem; font-size: .8rem; }
+.list-head { display: flex; justify-content: flex-end; margin-bottom: .6rem; }
+.sort-seg { display: inline-flex; border: 1.5px solid var(--line); border-radius: 999px; padding: 2px; gap: 2px; }
+.sort-seg button { background: none; border: 0; border-radius: 999px; padding: .25rem .8rem; font: inherit; font-size: .8rem; color: var(--muted, inherit); cursor: pointer; }
+.sort-seg button.on { background: var(--red-soft); color: var(--red); font-weight: 700; }
+.empty-note { text-align: center; padding: 1.4rem 0 .6rem; }
+@media (max-width: 520px) {
+  .sheet-band.has-action { padding-left: 1rem; padding-right: 5.8rem; text-align: left; }
+}
+
+/* 약속 줄: 달력 위 타원형 약속들, 오른쪽 끝 「지난 약속」 탭 */
+.appt-bar { display: flex; align-items: center; gap: .5rem; margin: .8rem 0 .2rem; }
+.appt-list { flex: 1; min-width: 0; display: flex; gap: .4rem; overflow-x: auto; padding: 2px 2px 4px; scrollbar-width: thin; }
+.appt-chip { flex: none; display: inline-flex; align-items: center; gap: .4rem; border: 1.5px solid var(--red); background: var(--red-soft); color: var(--ink); border-radius: 999px;
+  padding: .3rem .85rem; font: inherit; font-size: .85rem; cursor: pointer; white-space: nowrap; }
+.appt-chip:hover { filter: brightness(.97); }
+.appt-chip.past { border-color: var(--line); background: var(--paper); color: var(--muted); }
+.appt-date { font-weight: 700; color: var(--red); }
+.appt-chip.past .appt-date { color: var(--muted); }
+.appt-cat { font-size: .72rem; color: var(--muted); }
+.appt-empty { padding: .35rem 0; }
+.appt-tab { flex: none; border: 1.5px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 999px; padding: .3rem .8rem; font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.appt-tab:hover { border-color: var(--ink); }
+.appt-tab.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.appt-title { font-size: 1.1rem; display: flex; align-items: center; gap: .3rem; flex-wrap: wrap; }
+.pencil.ink { color: var(--ink); margin-right: .1rem; }
+.appt-chip.new { border-style: dashed; background: var(--paper); color: var(--red); font-weight: 700; }
+.appt-chip.pending { border-style: dashed; background: var(--paper); }
+.appt-chip.pending .appt-date { color: var(--muted); font-weight: 600; }
+.member-state.done { font-size: 1rem; line-height: 1; }

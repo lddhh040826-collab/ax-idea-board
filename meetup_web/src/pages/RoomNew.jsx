@@ -27,14 +27,14 @@ export default function RoomNew() {
   if (room) {
     const link = roomLink(room.id)
     return (
-      <Sheet band="방을 만들었어요" className="center">
+      <Sheet band="모임을 만들었어요" className="center">
         <h1>{room.title}</h1>
         <p className="muted">링크와 암호를 친구에게 보내 주세요.</p>
         <div className="link-box">{link}</div>
         <p>암호 <b className="mono">{room.password}</b></p>
         <div className="row wrap center-row">
-          <CopyButton text={`[${room.title}] 안 되는 날을 표시해 줘!\n${link}\n암호: ${room.password}`} label="링크+암호 복사" className="btn" />
-          <Link className="btn primary" to={`/r/${room.id}`}>방 들어가기</Link>
+          <CopyButton text={`[${room.title}] 불가능한 날을 표시해 줘!\n${link}\n암호: ${room.password}`} label="링크+암호 복사" className="btn" />
+          <Link className="btn primary" to={`/r/${room.id}`}>모임 들어가기</Link>
         </div>
       </Sheet>
     )
@@ -42,11 +42,11 @@ export default function RoomNew() {
 
   return (
     <>
-      <Link className="back" to="/">‹ 내 방 목록</Link>
-      <Sheet band="방 만들기">
+      <Link className="back" to="/">‹ 내 모임 목록</Link>
+      <Sheet band="모임 만들기">
         <form className="stack narrow" onSubmit={submit}>
           <label className="field">
-            <span>방 이름 (최대 {LIMITS.title}글자)</span>
+            <span>모임 이름 (최대 {LIMITS.title}글자)</span>
             <input value={title} maxLength={LIMITS.title} onChange={(e) => { setTitle(e.target.value); setError('') }} placeholder="예: 동기 송년회" autoFocus />
           </label>
           <label className="field">

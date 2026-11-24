@@ -45,7 +45,7 @@ export default function Login() {
         <form className="stack narrow" onSubmit={submit}>
           <label className="field">
             <span>이름 (아이디, 최대 {AUTH_LIMITS.name}글자)</span>
-            <input value={name} maxLength={AUTH_LIMITS.name} autoFocus autoComplete="username" onChange={(e) => { setName(e.target.value); setError('') }} placeholder="예: 다현" />
+            <input value={name} maxLength={AUTH_LIMITS.name} autoFocus autoComplete="username" onChange={(e) => { setName(e.target.value); setError('') }} placeholder="예: 홍길동" />
           </label>
           <label className="field">
             <span>비밀번호 ({AUTH_LIMITS.password}글자)</span>
@@ -61,7 +61,7 @@ export default function Login() {
           <button className="btn primary wide" type="submit" disabled={busy || !name.trim() || [...password].length !== AUTH_LIMITS.password}>
             {busy ? '확인 중…' : '들어가기'}
           </button>
-          <p className="muted small center-text">처음이면 이 이름으로 바로 가입돼요. 이름은 방 안에서 그대로 보여요.</p>
+          <p className="muted small center-text">처음이면 이 이름으로 바로 가입돼요. 이름은 모임 안에서 그대로 보여요.</p>
         </form>
       </Sheet>
     </>

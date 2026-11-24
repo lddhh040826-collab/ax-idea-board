@@ -260,7 +260,7 @@ declare
 begin
   select name into my_name from public.accounts where id = my_id;
   if my_name is null then raise exception '로그인이 필요해요'; end if;
-  if char_length(trim(coalesce(p_title, ''))) not between 1 and 10 then raise exception '방 이름은 1~10글자예요'; end if;
+  if char_length(trim(coalesce(p_title, ''))) not between 1 and 10 then raise exception '모임 이름은 1~10글자예요'; end if;
   if coalesce(p_password, '') !~ '^\d{1,8}$' then raise exception '암호는 숫자 최대 8자리예요'; end if;
   loop
     new_id := '';
@@ -291,9 +291,9 @@ begin
   if my_name is null then raise exception '로그인이 필요해요'; end if;
   if exists (select 1 from public.members where room_id = r and user_id = my_id) then return; end if;
   select password_hash into hash from public.rooms where id = r;
-  if hash is null then raise exception '방을 찾을 수 없어요'; end if;
+  if hash is null then raise exception '모임을 찾을 수 없어요'; end if;
   if crypt(coalesce(p_password, ''), hash) <> hash then raise exception '비밀번호가 틀려요'; end if;
-  if (select count(*) from public.members where room_id = r) >= 8 then raise exception '이 방은 최대 8명까지예요'; end if;
+  if (select count(*) from public.members where room_id = r) >= 8 then raise exception '이 모임은 최대 8명까지예요'; end if;
   insert into public.members (room_id, user_id, name) values (r, my_id, my_name);
 end;
 $$;
@@ -306,9 +306,28 @@ security definer
 set search_path = public, extensions
 as $$
 begin
-  if not public.is_host(r) then raise exception '방장만 할 수 있어요'; end if;
+  if not public.is_host(r) then raise exception '모임장만 할 수 있어요'; end if;
   if coalesce(p_password, '') !~ '^\d{1,8}$' then raise exception '암호는 숫자 최대 8자리예요'; end if;
   update public.rooms set password_hash = crypt(p_password, gen_salt('bf')) where id = r;
+end;
+$$;
+
+-- 모임 안에서 쓰는 내 이름(닉네임) 바꾸기. 계정 이름은 그대로 두고, 같은 모임 안 중복은 막는다
+create or replace function public.rename_member(r text, n text)
+returns void
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  my_id uuid := public.me();
+  t text := trim(coalesce(n, ''));
+begin
+  if my_id is null then raise exception '로그인이 필요해요'; end if;
+  if char_length(t) not between 1 and 10 then raise exception '이름은 1~10글자예요'; end if;
+  if not exists (select 1 from public.members where room_id = r and user_id = my_id) then raise exception '이 모임에 참여하지 않았어요'; end if;
+  if exists (select 1 from public.members where room_id = r and user_id <> my_id and name = t) then raise exception '이 모임에 같은 이름이 있어요'; end if;
+  update public.members set name = t where room_id = r and user_id = my_id;
 end;
 $$;
 
@@ -317,5 +336,40 @@ revoke execute on all functions in schema public from public, anon;
 grant execute on function
   public.me(), public.is_member(text), public.is_host(text),
   public.name_taken(text), public.whoami(), public.sign_up(text, text), public.sign_in(text, text), public.sign_out(),
-  public.room_preview(text), public.create_room(text, text), public.join_room(text, text), public.change_room_password(text, text)
+  public.room_preview(text), public.create_room(text, text), public.join_room(text, text), public.change_room_password(text, text),
+  public.rename_member(text, text)
   to authenticated;
+
+-- ── 약속 (11/24) ──
+-- 한 모임 안에서 계속 잡는 약속. 먼저 만들고(date = null, 날짜 미정) 결과 달력에서 날짜를 확정한다
+-- 불가능한 날(off_days)은 그대로 둔다. 읽기는 모임원 모두, 만들기·고치기·지우기는 모임장만. 같은 날짜에는 약속 하나
+create table if not exists public.appointments (
+  id uuid primary key default gen_random_uuid(),
+  room_id text not null references public.rooms on delete cascade,
+  date date,
+  title text not null check (char_length(title) between 1 and 20),
+  category text not null default 'etc',
+  created_at timestamptz not null default now(),
+  unique (room_id, date)
+);
+
+alter table public.appointments alter column date drop not null;
+alter table public.appointments enable row level security;
+drop policy if exists "모임원만 약속 읽기" on public.appointments;
+create policy "모임원만 약속 읽기" on public.appointments for select to authenticated using (public.is_member(room_id));
+drop policy if exists "모임장만 약속 만들기" on public.appointments;
+create policy "모임장만 약속 만들기" on public.appointments for insert to authenticated with check (public.is_host(room_id));
+drop policy if exists "모임장만 약속 고치기" on public.appointments;
+create policy "모임장만 약속 고치기" on public.appointments for update to authenticated using (public.is_host(room_id)) with check (public.is_host(room_id));
+drop policy if exists "모임장만 약속 지우기" on public.appointments;
+create policy "모임장만 약속 지우기" on public.appointments for delete to authenticated using (public.is_host(room_id));
+
+revoke all on public.appointments from anon, authenticated;
+grant select, insert, delete on public.appointments to authenticated;
+grant update (title, category, date) on public.appointments to authenticated;
+
+-- 예전 확정 날짜(rooms.confirmed_date)를 약속으로 옮긴다. 여러 번 실행해도 한 번만 옮겨진다
+insert into public.appointments (room_id, date, title, category)
+  select id, confirmed_date, title, 'etc' from public.rooms where confirmed_date is not null
+  on conflict (room_id, date) do nothing;
+update public.rooms set confirmed_date = null where confirmed_date is not null;

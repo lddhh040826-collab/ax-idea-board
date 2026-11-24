@@ -4,14 +4,27 @@
 const KEY = 'eonje:db:v2'
 const CHANNEL = 'eonje:realtime'
 
-const empty = () => ({ users: {}, rooms: {}, profiles: [], offDays: [], notes: [] })
+const empty = () => ({ users: {}, rooms: {}, profiles: [], offDays: [], notes: [], appointments: [] })
 
 export function readDb() {
+  let db
   try {
-    return { ...empty(), ...JSON.parse(localStorage.getItem(KEY) ?? 'null') }
+    db = { ...empty(), ...JSON.parse(localStorage.getItem(KEY) ?? 'null') }
   } catch {
     return empty()
   }
+  // 11/24: 모임마다 하나였던 확정 날짜(confirmedDate)를 약속 목록으로 옮긴다 (한 번만)
+  let moved = false
+  for (const room of Object.values(db.rooms)) {
+    if (!room.confirmedDate) continue
+    if (!db.appointments.some((a) => a.roomId === room.id && a.date === room.confirmedDate)) {
+      db.appointments.push({ id: newId(8), roomId: room.id, date: room.confirmedDate, title: room.title, category: 'etc', createdAt: new Date().toISOString() })
+    }
+    room.confirmedDate = null
+    moved = true
+  }
+  if (moved) writeDb(db)
+  return db
 }
 
 export function writeDb(db) {

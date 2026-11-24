@@ -94,7 +94,7 @@ export default function App() {
       </main>
       {!remote && (
         <footer className="footnote">
-          체험판 · 계정과 방은 이 브라우저에만 저장돼요. 친구와 실제로 함께 쓰려면 서버 저장을 붙여야 해요.
+          체험판 · 계정과 모임은 이 브라우저에만 저장돼요. 친구와 실제로 함께 쓰려면 서버 저장을 붙여야 해요.
         </footer>
       )}
     </SessionContext.Provider>

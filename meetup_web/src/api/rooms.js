@@ -4,7 +4,7 @@ import { remote } from './backend.js'
 import * as local from './local/rooms.js'
 import * as server from './server/rooms.js'
 
-export { LIMITS } from './limits.js'
+export { AUTH_LIMITS, LIMITS } from './limits.js'
 export { parseRoomLink, roomLink } from './links.js'
 
 const impl = remote ? server : local
@@ -17,8 +17,11 @@ export const joinRoom = run('joinRoom')
 export const leaveRoom = run('leaveRoom')
 export const saveOffDays = run('saveOffDays')
 export const saveNote = run('saveNote')
-export const confirmDate = run('confirmDate')
-export const cancelConfirm = run('cancelConfirm')
+export const createAppointment = run('createAppointment')
+export const updateAppointment = run('updateAppointment')
+export const setAppointmentDate = run('setAppointmentDate')
+export const deleteAppointment = run('deleteAppointment')
 export const renameRoom = run('renameRoom')
+export const renameMe = run('renameMe')
 export const changePassword = run('changePassword')
 export const deleteRoom = run('deleteRoom')

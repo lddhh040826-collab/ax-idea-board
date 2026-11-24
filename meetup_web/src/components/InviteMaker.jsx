@@ -3,8 +3,9 @@ import { useEffect, useRef, useState } from 'react'
 import { CATEGORIES, INVITE_SIZE, drawInvite, loadInviteFonts } from '../lib/invite.js'
 import Dialog from './Dialog.jsx'
 
-export default function InviteMaker({ room, profiles, onClose, onDone, onError }) {
-  const [category, setCategory] = useState(null)
+// initialCategory: 약속의 카테고리가 초대장 테마면 그 테마로 바로 시작한다
+export default function InviteMaker({ room, profiles, initialCategory = null, onClose, onDone, onError }) {
+  const [category, setCategory] = useState(initialCategory)
   const [time, setTime] = useState('')
   const [place, setPlace] = useState('')
   const [dress, setDress] = useState('')
